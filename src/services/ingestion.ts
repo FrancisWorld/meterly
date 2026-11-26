@@ -57,9 +57,16 @@ export function payloadHash(event: IncomingEvent): string {
     .digest("hex");
 }
 
-function dimensionOf(property: string, properties: Record<string, unknown>): string | null {
+/**
+ * Canonical, type-tagged encoding of a unique-meter value: the number 1 and the string "1" are different
+ * users and must not collapse into one distinct value. Tags: s(tring), n(umber), b(oolean).
+ */
+export function dimensionOf(property: string, properties: Record<string, unknown>): string | null {
   const value = properties[property];
-  return typeof value === "string" || typeof value === "number" || typeof value === "boolean" ? String(value) : null;
+  if (typeof value === "string") return `s:${value}`;
+  if (typeof value === "number") return `n:${value}`;
+  if (typeof value === "boolean") return `b:${value}`;
+  return null;
 }
 
 /**
