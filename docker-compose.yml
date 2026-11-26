@@ -22,7 +22,7 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: postgres://meterly:${POSTGRES_PASSWORD:-meterly-dev-only}@db:5432/meterly
-      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-replace-me-with-a-long-random-secret}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:?set STRIPE_WEBHOOK_SECRET, e.g. export STRIPE_WEBHOOK_SECRET=$(openssl rand -hex 32)}
       PORT: "3000"
     ports:
       - "127.0.0.1:${APP_PORT:-3000}:3000"

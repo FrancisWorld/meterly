@@ -9,7 +9,8 @@ import { migrate } from "../src/db/migrate.ts";
 import { createLogger } from "../src/logger.ts";
 
 describe("config", () => {
-  const base = { DATABASE_URL: "postgres://x", STRIPE_WEBHOOK_SECRET: "a-long-enough-secret" };
+  const strong = "9f2c41d07b8e5a36c1d4f0a7e93b82c5d6a1f47e0b9c3d85a2e6f1047b9d3c8e";
+  const base = { DATABASE_URL: "postgres://x", STRIPE_WEBHOOK_SECRET: strong };
   test("applies defaults", () => {
     const config = loadConfig(base);
     expect(config).toMatchObject({
