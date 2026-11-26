@@ -152,7 +152,7 @@ Preço em um item do plano:
 | Webhooks | assinaturas ausentes/erradas/adulteradas/com outro timestamp, bordas da janela de replay, replay de requisição capturada, entrega duplicada concorrente, fora de ordem, órfão e depois vínculo, webhook concorrendo com o vínculo |
 | HTTP | autenticação, isolamento entre tenants em todas as rotas, formato de validação, 413, 500 genérico, valores acima de 2^53 de ponta a ponta |
 
-Cobertura de `bun test --coverage` na última execução completa: 99,4 % das linhas e 97,4 % das funções em `src/`. Nenhum benchmark de vazão foi executado, então nenhum é afirmado.
+Cobertura de `bun test --coverage` na última execução completa: 99,4 % das linhas e 97,4 % das funções (todo `src/` mais o harness de teste). Nenhum benchmark de vazão foi executado, então nenhum é afirmado.
 
 ```bash
 bun install

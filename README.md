@@ -152,7 +152,7 @@ Pricing in a plan item:
 | Webhooks | missing/wrong/tampered/re-timed signatures, replay window edges, captured-request replay, concurrent duplicate delivery, out-of-order, orphan-then-link, webhook racing the link |
 | HTTP | auth, tenant isolation across every route, validation shape, 413, generic 500, amounts beyond 2^53 end to end |
 
-Coverage from `bun test --coverage` on the last full run: 99.4 % of lines and 97.4 % of functions across `src/`. No throughput benchmarks were run, so none are claimed.
+Coverage from `bun test --coverage` on the last full run: 99.4 % of lines and 97.4 % of functions (all of `src/` plus the test harness). No throughput benchmarks were run, so none are claimed.
 
 ```bash
 bun install
