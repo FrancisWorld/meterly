@@ -4,6 +4,7 @@ import type { Db, Queryable } from "../db/client.ts";
 import { asJson } from "../db/client.ts";
 import { computeInvoice, type InvoiceLine, type InvoiceTotals } from "../domain/invoice.ts";
 import type { InvoiceStatus } from "../domain/invoice-events.ts";
+import { MAX_INT64 } from "../domain/money.ts";
 import { periodAt } from "../domain/periods.ts";
 import { conflict, notFound } from "../errors.ts";
 import { getPlan } from "./catalog.ts";
@@ -55,6 +56,10 @@ async function assemble(
     })),
     creditBalanceMinor,
   });
+  // Amounts are stored as bigint; refuse to price what the schema cannot represent instead of failing at INSERT.
+  if (totals.subtotalMinor > MAX_INT64 || totals.lines.some((line) => line.amountMinor > MAX_INT64)) {
+    throw conflict("invoice amount exceeds the supported range", { maximum: MAX_INT64.toString() });
+  }
   return {
     draft: {
       ...totals,

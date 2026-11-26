@@ -53,13 +53,14 @@ migrations      SQL puro, aplicado por um runner com advisory lock
 Tudo abaixo foi executado em um notebook Apple Silicon (8 GB) com Docker (Colima).
 
 ```bash
+export STRIPE_WEBHOOK_SECRET=$(openssl rand -hex 32)   # obrigatório: o servidor não sobe sem um segredo forte
 docker compose up -d --build                    # PostgreSQL + API na porta 3000
 docker compose exec app bun src/cli/create-tenant.ts acme   # imprime tenant id e a chave de API (mostrada uma vez)
 
 # em um checkout com bun instalado:
 bun install
 export API_KEY=mtk_...                          # do comando anterior
-export STRIPE_WEBHOOK_SECRET=replace-me-with-a-long-random-secret   # padrão do compose
+# STRIPE_WEBHOOK_SECRET continua exportado do primeiro passo: o demo assina webhooks com ele
 scripts/demo.sh                                 # catálogo -> ingestão -> prévia -> fechamento -> push ao Stripe -> webhook
 docker compose down -v
 ```
@@ -138,7 +139,7 @@ Preço em um item do plano:
 
 ## Testes
 
-`bun test` executa 142 testes em 13 arquivos, incluindo propriedades com fast-check, contra um PostgreSQL real (a suíte cria e migra bancos `*_test` sozinha e recusa qualquer outro nome).
+`bun test` executa 148 testes em 13 arquivos, incluindo propriedades com fast-check, contra um PostgreSQL real (a suíte cria e migra bancos `*_test` sozinha e recusa qualquer outro nome).
 
 | Área | O que é provado |
 | --- | --- |
@@ -164,6 +165,7 @@ bun run typecheck && bun run lint && bun test
 ## Limitações
 
 - O servidor distribuído usa o Stripe **fake em memória**. O estado do fake se perde ao reiniciar (os ids de fatura já gravados não). Um cliente real implementaria `StripeGateway`; nenhum está incluído.
+- Inteiros são limitados à faixa do bigint do PostgreSQL (fora dela é 400); uma fatura cujo valor calculado a excederia é recusada com 409.
 - Períodos mensais, uma assinatura por cliente, sem cancelamento, trials, impostos ou descontos. A taxa base é cobrada em atraso.
 - Eventos atrasados são cobrados no período aberto, não por fatura corretiva; acima da idade máxima são rejeitados.
 - Créditos não expiram; um plano tem uma moeda e créditos são por moeda.

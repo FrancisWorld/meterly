@@ -53,13 +53,14 @@ migrations      plain SQL, applied by an advisory-locked runner
 Everything below was run on an Apple Silicon laptop (8 GB) with Docker (Colima).
 
 ```bash
+export STRIPE_WEBHOOK_SECRET=$(openssl rand -hex 32)   # required: the server refuses to start without a strong secret
 docker compose up -d --build                    # PostgreSQL + the API on :3000
 docker compose exec app bun src/cli/create-tenant.ts acme   # prints a tenant id and an API key (shown once)
 
 # in a checkout with bun installed:
 bun install
 export API_KEY=mtk_...                          # from the previous command
-export STRIPE_WEBHOOK_SECRET=replace-me-with-a-long-random-secret   # compose default
+# STRIPE_WEBHOOK_SECRET is still exported from the first step: the demo signs webhooks with it
 scripts/demo.sh                                 # catalog -> ingest -> preview -> finalize -> Stripe push -> webhook
 docker compose down -v
 ```
@@ -138,7 +139,7 @@ Pricing in a plan item:
 
 ## Testing
 
-`bun test` runs 142 tests across 13 files, including fast-check properties, against a real PostgreSQL (the suite creates and migrates `*_test` databases itself and refuses any other name).
+`bun test` runs 148 tests across 13 files, including fast-check properties, against a real PostgreSQL (the suite creates and migrates `*_test` databases itself and refuses any other name).
 
 | Area | What is proven |
 | --- | --- |
@@ -164,6 +165,7 @@ bun run typecheck && bun run lint && bun test
 ## Limitations
 
 - The shipped server wires the **in-memory fake** Stripe. State of the fake is lost on restart (the invoice ids already stored are not). A real client would implement `StripeGateway`; none is included.
+- Integers are limited to the PostgreSQL bigint range (out-of-range input is a 400); an invoice whose computed amount would exceed it is refused with a 409.
 - Monthly periods, one subscription per customer, no cancellation, trials, taxes or discounts. Base fees are billed in arrears.
 - Late events are billed in the open period, not through a corrective invoice; beyond the maximum age they are rejected.
 - Credits do not expire; a plan has one currency and credits are per currency.

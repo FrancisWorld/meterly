@@ -4,6 +4,7 @@ import {
   ceilDiv,
   divRoundHalfUp,
   formatDecimal,
+  MAX_INT64,
   MoneyError,
   maxBig,
   minBig,
@@ -36,10 +37,15 @@ describe("decimals", () => {
 describe("counts", () => {
   test("accepts safe integers and digit strings", () => {
     expect(parseCount(5)).toBe(5n);
-    expect(parseCount("123456789012345678901234567890")).toBe(123456789012345678901234567890n);
+    expect(parseCount("9007199254740993")).toBe(9007199254740993n);
   });
   test.each([-1, 1.5, Number.MAX_SAFE_INTEGER + 2, Number.NaN])("rejects number %p", (n) => {
     expect(() => parseCount(n)).toThrow(MoneyError);
+  });
+  test("enforces the PostgreSQL bigint range", () => {
+    expect(parseCount("9223372036854775807")).toBe(MAX_INT64);
+    expect(() => parseCount("9223372036854775808")).toThrow(/out of range/);
+    expect(() => parseCount("9".repeat(80))).toThrow(MoneyError);
   });
   test.each(["", "-3", "1.0", "0x10"])("rejects string %p", (s) => {
     expect(() => parseCount(s)).toThrow(MoneyError);

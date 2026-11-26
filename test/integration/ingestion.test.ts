@@ -193,3 +193,91 @@ describe("concurrency", () => {
     expect((await usage(customer.id, "api_calls")).total).toBe(String(winner));
   });
 });
+
+describe("typed unique dimensions", () => {
+  test('the number 1, the string "1" and the boolean true are three distinct users', async () => {
+    const { customer } = await seedBilling(world());
+    const unique = (key: string, user: unknown) => event(key, { meter: "active_users", properties: { user } });
+    await post([
+      unique("t1", 1),
+      unique("t2", "1"),
+      unique("t3", true),
+      unique("t4", "true"),
+      unique("t5", 1),
+      unique("t6", "1"),
+    ]);
+    expect((await usage(customer.id, "active_users")).total).toBe("4"); // 1, "1", true, "true"
+  });
+
+  test("non-scalar values do not count as a dimension", async () => {
+    await seedBilling(world());
+    const res = await post([
+      event("o1", { meter: "active_users", properties: { user: { id: 1 } } }),
+      event("o2", { meter: "active_users", properties: { user: null } }),
+    ]);
+    expect(res.body.results.map((r: { reason: string }) => r.reason)).toEqual(["missing_property", "missing_property"]);
+  });
+});
+
+describe("integer range", () => {
+  const MAX = "9223372036854775807";
+
+  test("the largest bigint is accepted and one more is a 400, not a 500", async () => {
+    const { customer } = await seedBilling(world());
+    const ok = await post([event("max", { quantity: MAX })]);
+    expect(ok.body.results[0].status).toBe("accepted");
+    expect((await usage(customer.id, "api_calls")).total).toBe(MAX);
+
+    const over = await post([event("fine", { quantity: 1 }), event("over", { quantity: "9223372036854775808" })]);
+    expect(over.status).toBe(400);
+    expect(over.body.error.code).toBe("validation_error");
+    expect(over.body.error.details[0].path).toBe("events.1.quantity");
+    expect(over.body.error.details[0].message).toContain("out of range");
+    const huge = await post([event("huge", { quantity: "9".repeat(60) })]);
+    expect(huge.status).toBe(400);
+    expect(
+      Number(
+        (await world().db`SELECT count(*)::int AS n FROM events WHERE idempotency_key IN ('fine','over','huge')`)[0].n,
+      ),
+    ).toBe(0);
+  });
+
+  test("other integer inputs are range-checked too", async () => {
+    const { customer } = await seedBilling(world());
+    const credit = await world().api("POST", `/v1/customers/${customer.id}/credits`, {
+      amount: "9223372036854775808",
+      currency: "usd",
+      reason: "x",
+    });
+    expect(credit.status).toBe(400);
+  });
+
+  test("an invoice whose amount cannot be stored is refused with a 409, not a 500", async () => {
+    const w = world();
+    await w.api("POST", "/v1/meters", { code: "bytes", aggregation: "sum" });
+    const plan = (
+      await w.api("POST", "/v1/plans", {
+        code: "p",
+        currency: "usd",
+        items: [{ meter: "bytes", pricing: { model: "graduated", tiers: [{ up_to: null, unit_amount: "1" }] } }],
+      })
+    ).body;
+    const c = (await w.api("POST", "/v1/customers", { external_id: "big", name: "Big" })).body;
+    const sub = (
+      await w.api("POST", "/v1/subscriptions", {
+        customer_id: c.id,
+        plan_id: plan.id,
+        started_at: "2026-03-01T00:00:00Z",
+      })
+    ).body;
+    await post([
+      event("b1", { customer: "big", meter: "bytes", quantity: MAX }),
+      event("b2", { customer: "big", meter: "bytes", quantity: MAX }),
+    ]);
+    const preview = await w.api("GET", `/v1/subscriptions/${sub.id}/invoice-preview`);
+    expect(preview.status).toBe(409);
+    expect(preview.body.error.message).toContain("supported range");
+    w.clock.set(new Date("2026-04-01T00:00:00Z"));
+    expect((await w.api("POST", `/v1/subscriptions/${sub.id}/invoices`, {})).status).toBe(409);
+  });
+});

@@ -6,6 +6,9 @@ const DECIMAL_RE = new RegExp(`^(\\d+)(?:\\.(\\d{1,${PRICE_DECIMALS}}))?$`);
 
 export class MoneyError extends Error {}
 
+/** Largest value a PostgreSQL bigint column can hold. */
+export const MAX_INT64 = 9_223_372_036_854_775_807n;
+
 /** Parse a non-negative decimal such as "0.0004" into a scaled bigint. */
 export function parseDecimal(input: string): bigint {
   const match = DECIMAL_RE.exec(input);
@@ -35,7 +38,9 @@ export function parseCount(input: string | number): bigint {
     return BigInt(input);
   }
   if (!/^\d+$/.test(input)) throw new MoneyError(`invalid integer "${input}"`);
-  return BigInt(input);
+  const value = BigInt(input);
+  if (value > MAX_INT64) throw new MoneyError(`integer out of range: the maximum is ${MAX_INT64}`);
+  return value;
 }
 
 /** Integer division rounding half away from zero. Divisor must be positive. */
