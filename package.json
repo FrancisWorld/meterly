@@ -1,0 +1,30 @@
+{
+  "name": "meterly",
+  "version": "0.1.0",
+  "description": "Usage-based billing engine: idempotent ingestion, late-event watermark, exact tiered pricing, Stripe outbox sync.",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun --watch src/main.ts",
+    "start": "bun src/main.ts",
+    "migrate": "bun src/db/migrate-cli.ts",
+    "tenant:create": "bun src/cli/create-tenant.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check .",
+    "format": "biome check --write .",
+    "test": "bun test",
+    "test:coverage": "bun test --coverage",
+    "webhook:sign": "bun scripts/sign-webhook.ts"
+  },
+  "dependencies": {
+    "hono": "^4.7.0",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.0.0",
+    "@types/bun": "latest",
+    "fast-check": "^4.0.0",
+    "typescript": "^5.7.0"
+  }
+}
